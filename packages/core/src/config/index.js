@@ -372,6 +372,7 @@ module.exports = {
         }
       },
       mapping: {
+        '*.wakatime.com': 'quad9',
         '*.github.com': 'quad9',
         '*github*.com': 'quad9',
         '*.github.io': 'quad9',
