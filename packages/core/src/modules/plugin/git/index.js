@@ -1,4 +1,5 @@
 const pluginConfig = require('./config')
+
 const Plugin = function (context) {
   const { config, shell, event, log } = context
   const pluginApi = {
@@ -18,17 +19,28 @@ const Plugin = function (context) {
       await pluginApi.start()
     },
 
+    isEnabled () {
+      return config.get().plugin.git.enabled
+    },
+
     async save (newConfig) {
 
     },
 
     async setProxy (ip, port) {
       const cmds = [
-        `git config --global http.proxy  http://${ip}:${port} `,
-        `git config --global https.proxy http://${ip}:${port} `
+        `git config --global http.proxy  http://${ip}:${port - 1} `,
+        `git config --global https.proxy http://${ip}:${port} `,
       ]
+
       if (config.get().plugin.git.setting.sslVerify === true) {
         cmds.push('git config --global http.sslVerify false ')
+      }
+
+      if (config.get().plugin.git.setting.noProxyUrls != null) {
+        for (const url in config.get().plugin.git.setting.noProxyUrls) {
+          cmds.push(`git config --global http."${url}".proxy "" `)
+        }
       }
 
       const ret = await shell.exec(cmds, { type: 'cmd' })
@@ -38,19 +50,34 @@ const Plugin = function (context) {
       return ret
     },
 
+    // 当手动修改过 `~/.gitconfig` 时，`unset` 可能会执行失败，所以除了第一条命令外，其他命令都添加了try-catch，防止关闭Git代理失败
     async unsetProxy () {
-      const cmds = [
-        'git config --global --unset https.proxy ',
-        'git config --global --unset http.proxy '
-      ]
-      if (config.get().plugin.git.setting.sslVerify === true) {
-        cmds.push('git config --global   http.sslVerify true ')
+      const ret = await shell.exec(['git config --global --unset http.proxy '], { type: 'cmd' })
+
+      try {
+        await shell.exec(['git config --global --unset https.proxy '], { type: 'cmd' })
+      } catch {
       }
-      const ret = await shell.exec(cmds, { type: 'cmd' })
+
+      if (config.get().plugin.git.setting.sslVerify === true) {
+        try {
+          await shell.exec(['git config --global --unset http.sslVerify '], { type: 'cmd' })
+        } catch {
+        }
+      }
+
+      if (config.get().plugin.git.setting.noProxyUrls != null) {
+        for (const url in config.get().plugin.git.setting.noProxyUrls) {
+          try {
+            await shell.exec([`git config --global --unset http."${url}".proxy `], { type: 'cmd' })
+          } catch {
+          }
+        }
+      }
       event.fire('status', { key: 'plugin.git.enabled', value: false })
       log.info('关闭【Git】代理成功')
       return ret
-    }
+    },
   }
   return pluginApi
 }
@@ -59,7 +86,7 @@ module.exports = {
   key: 'git',
   config: pluginConfig,
   status: {
-    enabled: false
+    enabled: false,
   },
-  plugin: Plugin
+  plugin: Plugin,
 }

@@ -1,8 +1,9 @@
 // 1个小时不访问，取消获取
+const net = require('node:net')
 const _ = require('lodash')
-const net = require('net')
-const config = require('./config.js')
 const log = require('../../utils/util.log.js')
+const config = require('./config.js')
+
 const DISABLE_TIMEOUT = 60 * 60 * 1000
 class SpeedTester {
   constructor ({ hostname }) {
@@ -21,13 +22,13 @@ class SpeedTester {
     this.test()
   }
 
-  pickFastAliveIp () {
+  pickFastAliveIpObj () {
     this.touch()
     if (this.alive.length === 0) {
-      this.test()
+      this.test() // 异步
       return null
     }
-    return this.alive[0].host
+    return this.alive[0]
   }
 
   touch () {
@@ -60,7 +61,7 @@ class SpeedTester {
     const promiseList = []
     for (const dnsKey in dnsMap) {
       const dns = dnsMap[dnsKey]
-      const one = this.getFromOneDns(dns).then(ipList => {
+      const one = this.getFromOneDns(dns).then((ipList) => {
         if (ipList) {
           for (const ip of ipList) {
             ips[ip] = { dns: ipList.isPreSet === true ? '预设IP' : dnsKey }
@@ -87,7 +88,7 @@ class SpeedTester {
     this.backupList = _.unionBy(newBackupList, 'host')
     this.testCount++
 
-    log.info('[speed]', this.hostname, '➜ ips:', this.backupList)
+    log.info('[speed]', this.hostname, '➜ ip-list:', this.backupList)
     await this.testBackups()
     if (config.notify) {
       config.notify({ key: 'test' })
@@ -111,7 +112,18 @@ class SpeedTester {
       _.merge(item, ret)
       aliveList.push({ ...ret, ...item })
       aliveList.sort((a, b) => a.time - b.time)
-      this.backupList.sort((a, b) => a.time - b.time)
+      this.backupList.sort((a, b) => {
+        if (a.time === b.time) {
+          return 0
+        }
+        if (a.time == null) {
+          return 1
+        }
+        if (b.time == null) {
+          return -1
+        }
+        return a.time - b.time
+      })
     } catch (e) {
       if (e.message !== 'timeout') {
         log.warn('[speed] test error:  ', this.hostname, `➜ ${item.host}:${item.port} from DNS '${item.dns}'`, ', errorMsg:', e.message)

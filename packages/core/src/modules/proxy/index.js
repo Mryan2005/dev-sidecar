@@ -43,7 +43,7 @@ const ProxyPlugin = function (context) {
       await shell.enableLoopback()
       log.info('打开EnableLoopback成功')
       return true
-    }
+    },
   }
   return api
 }
@@ -54,7 +54,17 @@ module.exports = {
     name: '系统代理',
     use: 'local',
     other: [],
+    proxyHttp: false, // false=只代理HTTPS请求   true=同时代理HTTP和HTTPS请求
     setEnv: false,
+
+    // 排除国内域名 所需配置
+    excludeDomesticDomainAllowList: true, // 是否排除国内域名，默认：需要排除
+    autoUpdateDomesticDomainAllowList: true, // 是否自动更新国内域名
+    remoteDomesticDomainAllowListFileUrl: 'https://raw.githubusercontent.com/pluwen/china-domain-allowlist/refs/heads/main/allow-list.sorl',
+    domesticDomainAllowListFileAbsolutePath: null, // 自定义 domestic-domain-allowlist.txt 文件位置，可以是本地文件路径
+    domesticDomainAllowListFilePath: './extra/proxy/domestic-domain-allowlist.txt', // 内置国内域名文件
+
+    // 自定义系统代理排除列表
     excludeIpList: {
       // region 常用国内可访问域名
 
@@ -185,6 +195,9 @@ module.exports = {
       // 网站ICP备案查询
       '*.icpapi.com': true,
 
+      // Navicat
+      '*.navicat.com': true,
+
       // Github文件上传所使用的域名，被DS代理会导致文件上传经常失败，从系统代理中排除掉
       'objects-origin.githubusercontent.com': true,
 
@@ -194,37 +207,37 @@ module.exports = {
       // endregion
 
       // 本地地址，无需代理
-      localhost: true,
+      'localhost': true,
       'localhost.*': true, // 部分VPN会在host中添加这种格式的域名指向127.0.0.1，所以也排除掉
-      '127.*': true,
+      '127.*.*.*': true,
       'test.*': true, // 本地开发时，测试用的虚拟域名格式，无需代理
 
       // 服务器端常用地址，无需代理
-      '10.*': true,
-      '172.16.*': true,
-      '172.17.*': true,
-      '172.18.*': true,
-      '172.19.*': true,
-      '172.20.*': true,
-      '172.21.*': true,
-      '172.22.*': true,
-      '172.23.*': true,
-      '172.24.*': true,
-      '172.25.*': true,
-      '172.26.*': true,
-      '172.27.*': true,
-      '172.28.*': true,
-      '172.29.*': true,
-      '172.30.*': true,
-      '172.31.*': true,
+      '10.*.*.*': true,
+      '172.16.*.*': true,
+      '172.17.*.*': true,
+      '172.18.*.*': true,
+      '172.19.*.*': true,
+      '172.20.*.*': true,
+      '172.21.*.*': true,
+      '172.22.*.*': true,
+      '172.23.*.*': true,
+      '172.24.*.*': true,
+      '172.25.*.*': true,
+      '172.26.*.*': true,
+      '172.27.*.*': true,
+      '172.28.*.*': true,
+      '172.29.*.*': true,
+      '172.30.*.*': true,
+      '172.31.*.*': true,
 
       // 局域网地址，无需代理
-      '192.168.*': true
-    }
+      '192.168.*.*': true,
+    },
   },
   status: {
     enabled: false,
-    proxyTarget: ''
+    proxyTarget: '',
   },
-  plugin: ProxyPlugin
+  plugin: ProxyPlugin,
 }
